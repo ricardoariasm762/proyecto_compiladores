@@ -1,0 +1,46 @@
+/* =====================================================================
+   Programa de Prueba Oficial: Flujo Válido Completo en StageLang
+   Control de iluminación DMX, mezcla y temporización escénica.
+   Demuestra:
+   - Front-End: Tokens, AST EBNF, Ámbitos (GLOBAL -> escena_*) y Coerción INT -> FLOAT.
+   - Middle-End: Generación TAC (Cuádruplas), Plegado de Constantes y Eliminación de Temporales Muertos.
+   - Back-End: Stack Frames LIFO + Heap Dinámico en EmuladorVirtualIR, y Asignación de
+     Registros Físicos (R0, R1, R2) con liberación por Tiempo de Vida (Liveness) y Spill a 0x2000+.
+   ===================================================================== */
+
+// 1. Declaraciones en el ámbito GLOBAL (alojadas en Stack Frame GLOBAL FP=0x7000)
+int canal_base = 10;
+float intensidad_master = 0.5 + 1.5 * 2.0;
+string perfil_show = "Concierto_Sinfonico_Principal";
+
+// 2. Primera escena con su propio ámbito y Stack Frame local (escena_apertura FP=0x7100)
+escena apertura {
+    // Expresión de constantes puras: candidata a Plegado de Constantes (100 + 25 * 2 -> 150)
+    int brillo_spot = 100 + 25 * 2;
+    // Expresión con precedencia, paréntesis y coerción implícita INT -> FLOAT
+    float fade_in = (canal_base + 5) * intensidad_master;
+
+    canal brillo_spot;
+    espera fade_in;
+    // El comando 'mezcla' reserva dinámicamente un buffer en el Heap (0x1000+) y guarda
+    // su puntero en el Stack Frame actual, liberándolo al cerrar la escena.
+    mezcla perfil_show;
+}
+
+// 3. Segunda escena independiente (escena_climax FP=0x7100) con alta presión de registros
+escena climax {
+    int a = 12;
+    int b = 8;
+    int c = 6;
+    int d = 4;
+
+    // Árbol de expresión compuesto con múltiples temporales vivos simultáneos
+    // que demuestra tanto la reutilización de registros por Liveness como el Spill a [0x2000+]
+    // cuando los 3 registros físicos (R0, R1, R2) están ocupados por subexpresiones vivas:
+    int potencia_total = ((a + b) * (c + d)) + ((a - d) * (b + c) * (a - b + c));
+    float tiempo_cierre = potencia_total / 10.0;
+
+    mezcla "Preset_Estrobos_Climax";
+    canal potencia_total;
+    espera tiempo_cierre;
+}

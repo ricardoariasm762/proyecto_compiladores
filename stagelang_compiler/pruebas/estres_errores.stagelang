@@ -1,0 +1,26 @@
+/* =====================================================================
+   Batería de Pruebas de Estrés y Manejo Riguroso de Errores en StageLang
+   Cada bloque está separado por la marca '---CASO:' para que el
+   orquestador main.py también pueda ejecutarlos individualmente o en lote.
+   ===================================================================== */
+
+// ---CASO: 1. Error Léxico (Caracteres ilegales @ y $ en el código fuente) ---
+int dimmer_principal = 250 @ 10;
+float costo_energia = $99.5;
+
+// ---CASO: 2. Error Sintáctico (Operador binario huérfano y paréntesis sin cerrar) ---
+int foco_roto = (40 + * 15;
+
+// ---CASO: 3. Error Semántico de Ámbito (Uso de variable local fuera de su escena) ---
+int maestro_global = 100;
+escena intro_privada {
+    int luz_secreta = 80;
+    canal luz_secreta;
+}
+// 'luz_secreta' ya fue destruida al cerrar el ámbito 'escena_intro_privada'
+canal luz_secreta;
+
+// ---CASO: 4. Error Semántico de Tipos (Operación inválida entre STR e INT/FLOAT) ---
+string etiqueta_foco = "Wash_LED_RGB";
+int offset_dmx = 16;
+int resultado_invalido = etiqueta_foco + offset_dmx;

@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STAGELANG DMX-8 — Controlador de Iluminación, Mezcla y Temporización</title>
+  <style>
+    :root {
+      --bg-chassis: #06080d;
+      --bg-surface: #0c101a;
+      --bg-deck: #121826;
+      --bg-recessed: #04060a;
+      --border-console: #222d44;
+      --border-bright: #334263;
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.45);
+      --cyan: #06b6d4;
+      --cyan-glow: rgba(6, 182, 212, 0.45);
+      --violet: #a855f7;
+      --emerald: #10b981;
+      --crimson: #ef4444;
+      --text-white: #f8fafc;
+      --text-light: #cbd5e1;
+      --text-dim: #64748b;
+      --font-mono: "JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-chassis);
+      background-image:
+        radial-gradient(circle at 20% 0%, rgba(6, 182, 212, 0.08), transparent 40%),
+        radial-gradient(circle at 80% 0%, rgba(245, 158, 11, 0.08), transparent 40%);
+      color: var(--text-white);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* ==================== 1. HEADER DE LA MESA DMX ==================== */
+    header.dmx-header {
+      background: linear-gradient(180deg, #161f33 0%, #0b0f1a 100%);
+      border-bottom: 2px solid var(--border-console);
+      box-shadow: 0 6px 26px rgba(0, 0, 0, 0.75);
+      padding: 12px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+      z-index: 20;
+    }
+
+    .brand-block {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .dmx-logo {
+      background: linear-gradient(135deg, var(--amber), #d97706);
+      color: #05070b;
+      font-family: var(--font-mono);
+      font-weight: 900;
+      font-size: 13px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      letter-spacing: 1px;
+      box-shadow: 0 0 18px var(--amber-glow);
+    }
+
+    .brand-text h1 {
+      font-size: 16.5px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      color: var(--text-white);
+    }
+
+    .brand-text p {
+      font-size: 11.5px;
+      color: var(--cyan);
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+
+    .header-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Selector de Presets + Botón Cargar */
+    .preset-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-recessed);
+      border: 1px solid var(--border-console);
+      padding: 5px 8px;
+      border-radius: 8px;
+    }
+
+    .preset-box label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--amber);
+      font-weight: 700;
+      text-transform: uppercase;
+      padding-left: 4px;
+    }
+
+    select#preset-select {
+      background: #0d1322;
+      color: var(--text-white);
+      border: 1px solid var(--border-bright);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+      min-width: 245px;
+    }
+
+    .btn-console {
+      border: 1px solid transparent;
+      border-radius: 7px;
+      padding: 8px 13px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      text-transform: uppercase;
+    }
+
+    .btn-load {
+      background: #1e293b;
+      color: var(--cyan);
+      border-color: #334155;
+    }
+
+    .btn-load:hover {
+      background: #27354d;
+      border-color: var(--cyan);
+    }
+
+    /* Transporte del Show */
+    .transport-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-launch {
+      background: linear-gradient(135deg, var(--emerald) 0%, #059669 100%);
+      color: #03120d;
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-launch:hover {
+      filter: brightness(1.12);
+      box-shadow: 0 0 22px rgba(16, 185, 129, 0.65);
+    }
+
+    .btn-pause {
+      background: linear-gradient(135deg, var(--amber) 0%, #d97706 100%);
+      color: #06080d;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-pause:hover {
+      filter: brightness(1.1);
+    }
+
+    .btn-blackout {
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+      color: #fff;
+      border-color: #f87171;
+      box-shadow: 0 0 14px rgba(239, 68, 68, 0.35);
+    }
+
+    .btn-blackout:hover {
+      filter: brightness(1.12);
+    }
+
+    /* Master Dimmer (0% - 100%) */
+    .master-dimmer-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-recessed);
+      border: 1px solid var(--amber);
+      padding: 6px 12px;
+      border-radius: 8px;
+      box-shadow: inset 0 0 10px rgba(245, 158, 11, 0.15);
+    }
+
+    .master-dimmer-box label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--amber);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    input#master-dimmer {
+      width: 105px;
+      accent-color: var(--amber);
+      cursor: pointer;
+    }
+
+    .master-val {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 900;
+      color: var(--amber);
+      min-width: 42px;
+      text-align: right;
+    }
+
+    /* ==================== CONTENEDOR PRINCIPAL DE LA MESA ==================== */
+    main.console-body {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 16px 20px;
+      flex: 1;
+    }
+
+    .console-section {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-console);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    .section-bar {
+      background: linear-gradient(90deg, #151e30 0%, #101725 100%);
+      border-bottom: 1px solid var(--border-console);
+      padding: 9px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .section-title {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--cyan);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .led {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+    }
+
+    .led.amber {
+      background: var(--amber);
+      box-shadow: 0 0 8px var(--amber);
+    }
+
+    .led.emerald {
+      background: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
+    }
+
+    /* ==================== 2. ZONA SUPERIOR: ESCENARIO VISUAL Y RACK DE 8 CANALES DMX ==================== */
+    .upper-stage-deck {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 16px;
+      padding: 16px;
+      background: var(--bg-recessed);
+    }
+
+    @media (max-width: 1180px) {
+      .upper-stage-deck {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Escenario en Vivo (Stage Rig + Haces de Luz) */
+    .stage-rig-viewport {
+      background:
+        radial-gradient(ellipse at 50% 100%, rgba(30, 41, 59, 0.45), transparent 70%),
+        linear-gradient(180deg, #05070c 0%, #090d16 78%, #141c2e 100%);
+      border: 1px solid var(--border-console);
+      border-radius: 10px;
+      padding: 14px 14px 20px 14px;
+      position: relative;
+      min-height: 295px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    /* Estructura metálica superior (Truss) */
+    .stage-truss {
+      background: repeating-linear-gradient(
+        45deg,
+        #1e293b,
+        #1e293b 6px,
+        #0f172a 6px,
+        #0f172a 14px
+      );
+      height: 12px;
+      border-radius: 4px;
+      border: 1px solid #334155;
+      margin-bottom: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+    }
+
+    .fixtures-row {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 8px;
+      position: relative;
+      z-index: 2;
+      flex: 1;
+    }
+
+    .fixture-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    /* Carcasa y Lente del Foco PAR-LED / Spotlight */
+    .spotlight-head {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #263147, #090d14 75%);
+      border: 3px solid #2b3852;
+      position: relative;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .spotlight-core {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      transition: all 0.18s ease;
+    }
+
+    /* Haz de Luz Proyectado sobre el Escenario */
+    .light-beam {
+      width: 125%;
+      height: 175px;
+      margin-top: -8px;
+      clip-path: polygon(28% 0%, 72% 0%, 100% 100%, 0% 100%);
+      opacity: 0;
+      transition: opacity 0.18s ease, background 0.18s ease;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    .fixture-tag {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 800;
+      color: var(--text-light);
+      background: rgba(9, 13, 22, 0.85);
+      border: 1px solid #243048;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-top: auto;
+      z-index: 4;
+    }
+
+    /* Tarima del Escenario */
+    .stage-floor {
+      height: 16px;
+      background: linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      border-top: 1px solid #334155;
+      border-radius: 4px;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    /* Banco de 8 Faders Interactivos DMX */
+    .fader-wing {
+      background: linear-gradient(180deg, #0d131f 0%, #131b2c 100%);
+      border: 1px solid var(--border-console);
+      border-radius: 10px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 8px;
+    }
+
+    .channel-strip {
+      background: #080b12;
+      border: 1px solid #1d273b;
+      border-radius: 8px;
+      padding: 8px 5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .channel-strip.cue-active {
+      border-color: var(--amber);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+    }
+
+    .ch-header {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 900;
+      color: var(--text-white);
+    }
+
+    /* Selector de Color por Canal */
+    select.ch-color-picker {
+      background: #111827;
+      color: var(--text-light);
+      border: 1px solid #28354e;
+      border-radius: 4px;
+      font-size: 10px;
+      padding: 2px 3px;
+      width: 100%;
+      cursor: pointer;
+      outline: none;
+      text-align: center;
+    }
+
+    /* Deslizador Vertical (Fader Físico) */
+    .fader-slot {
+      position: relative;
+      height: 128px;
+      width: 34px;
+      background: #030508;
+      border: 1px solid #1f2b42;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 0;
+    }
+
+    /* Barra de nivel luminoso detrás del fader */
+    .fader-meter {
+      position: absolute;
+      bottom: 4px;
+      left: 5px;
+      width: 4px;
+      height: 0%;
+      max-height: calc(100% - 8px);
+      background: linear-gradient(180deg, var(--amber), var(--cyan));
+      border-radius: 2px;
+      transition: height 0.12s ease;
+    }
+
+    input.vertical-fader {
+      -webkit-appearance: slider-vertical;
+      appearance: slider-vertical;
+      writing-mode: bt-lr;
+      width: 22px;
+      height: 112px;
+      background: transparent;
+      cursor: pointer;
+      accent-color: var(--cyan);
+    }
+
+    .readout-box {
+      width: 100%;
+      background: #04060a;
+      border: 1px solid #192234;
+      border-radius: 4px;
+      padding: 3px 2px;
+      text-align: center;
+      font-family: var(--font-mono);
+    }
+
+    .readout-pct {
+      font-size: 11.5px;
+      font-weight: 900;
+      color: var(--amber);
+      display: block;
+    }
+
+    .readout-dmx {
+      font-size: 9.5px;
+      color: var(--cyan);
+      display: block;
+    }
+
+    /* Botón FLASH / SOLO */
+    button.btn-flash {
+      width: 100%;
+      background: #172136;
+      color: var(--text-light);
+      border: 1px solid #2b3b5c;
+      border-radius: 5px;
+      padding: 5px 0;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.1s ease;
+    }
+
+    button.btn-flash:hover {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+
+    button.btn-flash:active,
+    button.btn-flash.flashing {
+      background: var(--amber);
+      color: #05070b;
+      box-shadow: 0 0 12px var(--amber);
+    }
+
+    /* ==================== 3. ZONA INFERIOR: EDITOR DE RUTINAS Y MEZCLADOR/TIMELINE ==================== */
+    .lower-console-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 16px;
+      flex: 1;
+    }
+
+    @media (max-width: 1180px) {
+      .lower-console-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Zona Inferior Izquierda: Editor StageLang + Pantalla LCD de Estado */
+    .programmer-body {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .editor-frame {
+      display: flex;
+      height: 255px;
+      background: var(--bg-recessed);
+      border-bottom: 1px solid var(--border-console);
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 20px;
+      overflow: hidden;
+    }
+
+    .line-numbers {
+      width: 46px;
+      padding: 12px 8px 12px 4px;
+      background: #070a12;
+      color: var(--text-dim);
+      border-right: 1px solid var(--border-console);
+      text-align: right;
+      user-select: none;
+      overflow: hidden;
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .ln-item {
+      padding-right: 4px;
+      border-radius: 3px;
+    }
+
+    .ln-item.ln-error {
+      background: rgba(239, 68, 68, 0.5);
+      color: #fff;
+      font-weight: 900;
+      box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
+    }
+
+    textarea#script-editor {
+      flex: 1;
+      background: transparent;
+      color: #e2e8f0;
+      border: none;
+      padding: 12px 14px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 20px;
+      resize: none;
+      outline: none;
+      white-space: pre;
+      overflow: auto;
+      tab-size: 4;
+    }
+
+    /* Display LCD de Estado / Alertas del Controlador */
+    .lcd-status-panel {
+      margin: 12px 14px;
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      border: 1px solid var(--border-console);
+      transition: all 0.2s ease;
+    }
+
+    .lcd-status-panel.ready {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.14), rgba(6, 182, 212, 0.08));
+      border-color: rgba(16, 185, 129, 0.55);
+      color: #6ee7b7;
+      box-shadow: inset 0 0 18px rgba(16, 185, 129, 0.12);
+    }
+
+    .lcd-status-panel.fault {
+      background: linear-gradient(90deg, rgba(239, 68, 68, 0.2), rgba(153, 27, 27, 0.15));
+      border-color: #ef4444;
+      color: #fecaca;
+      box-shadow: 0 0 18px rgba(239, 68, 68, 0.25);
+    }
+
+    .lcd-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 900;
+      margin-bottom: 5px;
+      letter-spacing: 0.5px;
+    }
+
+    .lcd-detail {
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
+    /* Zona Inferior Derecha: Mezclador, Temporizador y Bitácora del Show (Cue Log) */
+    .timeline-body {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .monitors-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .monitor-widget {
+      background: var(--bg-recessed);
+      border: 1px solid var(--border-console);
+      border-radius: 9px;
+      padding: 10px 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .widget-caption {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      letter-spacing: 0.6px;
+    }
+
+    .widget-main {
+      font-family: var(--font-mono);
+      font-size: 15px;
+      font-weight: 900;
+      color: var(--amber);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .widget-sub {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--cyan);
+    }
+
+    .timer-track {
+      width: 100%;
+      height: 8px;
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 3px;
+    }
+
+    .timer-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--cyan), var(--violet), var(--amber));
+      box-shadow: 0 0 10px var(--cyan);
+      transition: width 0.08s linear;
+    }
+
+    /* Bitácora del Show (Cue Log) */
+    .cuelog-container {
+      background: var(--bg-recessed);
+      border: 1px solid var(--border-console);
+      border-radius: 9px;
+      padding: 10px 12px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 210px;
+      max-height: 245px;
+    }
+
+    .cuelog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      padding-bottom: 7px;
+      border-bottom: 1px solid #182235;
+      margin-bottom: 8px;
+    }
+
+    ul#cue-log-list {
+      list-style: none;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    ul#cue-log-list li {
+      padding: 5px 9px;
+      border-radius: 5px;
+      background: #090d16;
+      border-left: 3px solid var(--cyan);
+      color: var(--text-light);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    ul#cue-log-list li.cue-scene {
+      border-left-color: var(--amber);
+      color: #fde68a;
+      font-weight: 700;
+    }
+
+    ul#cue-log-list li.cue-mix {
+      border-left-color: var(--violet);
+      color: #e9d5ff;
+    }
+
+    ul#cue-log-list li.cue-wait {
+      border-left-color: var(--emerald);
+      color: #a7f3d0;
+    }
+
+    ul#cue-log-list li.cue-fault {
+      border-left-color: var(--crimson);
+      background: rgba(239, 68, 68, 0.14);
+      color: #fecaca;
+    }
+
+    .cue-time {
+      color: var(--amber);
+      font-weight: 800;
+      min-width: 68px;
+    }
+  </style>
+</head>
+<body>
+  <!-- ==================== 1. HEADER DE LA MESA DMX ==================== -->
+  <header class="dmx-header">
+    <div class="brand-block">
+      <div class="dmx-logo">DMX-8 PRO</div>
+      <div class="brand-text">
+        <h1>STAGELANG DMX-8 — Controlador de Iluminación, Mezcla y Temporización</h1>
+        <p>Consola Escénica de 8 Canales, Mezclador Armónico y Secuenciador de Escenas</p>
+      </div>
+    </div>
+
+    <div class="header-toolbar">
+      <!-- Selector de Rutinas Preprogramadas -->
+      <div class="preset-box">
+        <label for="preset-select">Rutina:</label>
+        <select id="preset-select"></select>
+        <button id="btn-load-preset" class="btn-console btn-load" type="button">
+          📥 Cargar en Editor
+        </button>
+      </div>
+
+      <!-- Controles de Transporte del Show -->
+      <div class="transport-bar">
+        <button id="btn-launch-show" class="btn-console btn-launch" type="button">
+          ▶ COMPILAR Y LANZAR SHOW
+        </button>
+        <button id="btn-pause-show" class="btn-console btn-pause" type="button">
+          ⏸ PAUSAR
+        </button>
+        <button id="btn-blackout" class="btn-console btn-blackout" type="button">
+          ⏹ APAGAR TODO (BLACKOUT)
+        </button>
+      </div>
+
+      <!-- Master Dimmer (0% - 100%) -->
+      <div class="master-dimmer-box">
+        <label for="master-dimmer">Master Dimmer</label>
+        <input id="master-dimmer" type="range" min="0" max="100" value="100" />
+        <span id="master-dimmer-val" class="master-val">100%</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== CUERPO PRINCIPAL DE LA CONSOLA ==================== -->
+  <main class="console-body">
+    <!-- ==================== 2. ZONA SUPERIOR: ESCENARIO VISUAL Y RACK DE 8 CANALES DMX ==================== -->
+    <section class="console-section">
+      <div class="section-bar">
+        <div class="section-title">
+          <span class="led amber"></span>
+          Escenario en Vivo (Puente de 8 Luminarias PAR-LED) &amp; Banco de Faders DMX (CH1 – CH8)
+        </div>
+        <span id="rig-summary" style="font-family:var(--font-mono); font-size:11.5px; color:var(--text-light);">
+          Universo DMX-512 #1 | 8 Canales Activos
+        </span>
+      </div>
+
+      <div class="upper-stage-deck">
+        <!-- Escenario en Vivo con Haces de Luz Reales -->
+        <div class="stage-rig-viewport">
+          <div class="stage-truss"></div>
+          <div id="fixtures-row" class="fixtures-row"></div>
+          <div class="stage-floor">
+            <span>ESCENARIO PRINCIPAL — TARIMA DMX-8</span>
+            <span id="floor-master-info">MASTER DIMMER: 100%</span>
+          </div>
+        </div>
+
+        <!-- Banco de 8 Faders Interactivos con Botón FLASH / SOLO -->
+        <div id="fader-wing" class="fader-wing"></div>
+      </div>
+    </section>
+
+    <!-- ==================== 3 & 4. ZONA INFERIOR: PROGRAMADOR Y MEZCLADOR/TIMELINE ==================== -->
+    <div class="lower-console-grid">
+      <!-- Zona Inferior Izquierda: Programador de Rutinas (StageLang Script Editor) -->
+      <section class="console-section programmer-body">
+        <div class="section-bar">
+          <div class="section-title">
+            <span class="led"></span>
+            Programador de Rutinas Escénicas (StageLang Script Editor)
+          </div>
+          <span id="editor-coords" style="font-family:var(--font-mono); font-size:11.5px; color:var(--amber);">
+            L:1, C:1
+          </span>
+        </div>
+
+        <div class="editor-frame">
+          <div id="line-numbers" class="line-numbers"></div>
+          <textarea id="script-editor" spellcheck="false"></textarea>
+        </div>
+
+        <!-- Display LCD de Estado / Alertas del Controlador -->
+        <div id="lcd-panel" class="lcd-status-panel ready">
+          <div class="lcd-top">
+            <span id="lcd-headline">● SHOW COMPILADO Y LISTO</span>
+            <span id="lcd-badge">SISTEMA EN LÍNEA</span>
+          </div>
+          <div id="lcd-message" class="lcd-detail">Carga una rutina preprogramada o edita el script StageLang y pulsa "▶ COMPILAR Y LANZAR SHOW".</div>
+        </div>
+      </section>
+
+      <!-- Zona Inferior Derecha: Mezclador y Temporizador de Escenas (Timeline) -->
+      <section class="console-section">
+        <div class="section-bar">
+          <div class="section-title">
+            <span class="led emerald"></span>
+            Mezclador, Temporizador de Escenas y Bitácora del Show (Cue Log)
+          </div>
+          <span id="cue-counter-badge" style="font-family:var(--font-mono); font-size:11.5px; color:var(--cyan);">
+            0 / 0 Cues
+          </span>
+        </div>
+
+        <div class="timeline-body">
+          <div class="monitors-grid">
+            <!-- Monitor de Escena Activa y Mezclador -->
+            <div class="monitor-widget">
+              <span class="widget-caption">Monitor de Escena Activa &amp; Mezcla</span>
+              <div class="widget-main">
+                <span id="active-scene-name">ESCENA: REPOSO</span>
+              </div>
+              <div id="active-mix-status" class="widget-sub">
+                Mezclador: Sin mezcla activa
+              </div>
+            </div>
+
+            <!-- Cronómetro y Barra de Temporización (espera) -->
+            <div class="monitor-widget">
+              <span class="widget-caption">Temporizador de Escena (espera)</span>
+              <div class="widget-main">
+                <span id="wait-countdown">0.00 s</span>
+                <span id="show-clock" style="font-size:12px; color:var(--text-light);">Reloj: 00:00.0</span>
+              </div>
+              <div class="timer-track">
+                <div id="wait-progress-fill" class="timer-fill"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bitácora del Show (Cue Log) -->
+          <div class="cuelog-container">
+            <div class="cuelog-header">
+              <span>Bitácora de Señales Disparadas en Vivo (Cue Log)</span>
+              <span id="transport-state-label" style="color:var(--emerald);">LISTO</span>
+            </div>
+            <ul id="cue-log-list"></ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    // ==================== PALETA DE COLORES CONFIGURABLE POR CANAL ====================
+    const PALETA_COLORES = {
+      amber:   { nombre: "Ámbar",        hex: "#f59e0b", rgb: "245, 158, 11" },
+      cyan:    { nombre: "Cian",         hex: "#06b6d4", rgb: "6, 182, 212" },
+      magenta: { nombre: "Magenta",      hex: "#ec4899", rgb: "236, 72, 153" },
+      warm:    { nombre: "Blanco Cálido",hex: "#fef08a", rgb: "254, 240, 138" },
+      violet:  { nombre: "Violeta UV",   hex: "#a855f7", rgb: "168, 85, 247" },
+      emerald: { nombre: "Esmeralda",    hex: "#10b981", rgb: "16, 185, 129" },
+      blue:    { nombre: "Azul Real",    hex: "#3b82f6", rgb: "59, 130, 246" },
+      crimson: { nombre: "Rojo Escena",  hex: "#ef4444", rgb: "239, 68, 68" }
+    };
+
+    const COLORES_INICIALES = [
+      "amber", "cyan", "magenta", "warm", "violet", "emerald", "blue", "crimson"
+    ];
+
+    // Estado de los 8 canales (0..100%)
+    const estadoCanales = {
+      1: { intensidad: 0, colorKey: COLORES_INICIALES[0], previoFlash: null },
+      2: { intensidad: 0, colorKey: COLORES_INICIALES[1], previoFlash: null },
+      3: { intensidad: 0, colorKey: COLORES_INICIALES[2], previoFlash: null },
+      4: { intensidad: 0, colorKey: COLORES_INICIALES[3], previoFlash: null },
+      5: { intensidad: 0, colorKey: COLORES_INICIALES[4], previoFlash: null },
+      6: { intensidad: 0, colorKey: COLORES_INICIALES[5], previoFlash: null },
+      7: { intensidad: 0, colorKey: COLORES_INICIALES[6], previoFlash: null },
+      8: { intensidad: 0, colorKey: COLORES_INICIALES[7], previoFlash: null }
+    };
+
+    let masterDimmerPct = 100;
+    let catalogoPresets = [];
+    let lineaErrorActual = null;
+
+    // Estado del motor de reproducción en tiempo real
+    let colaEventosShow = [];
+    let indiceEventoActual = 0;
+    let showEnEjecucion = false;
+    let showPausado = false;
+    let inicioShowTimestamp = 0;
+    let acumuladoRelojSeg = 0;
+    let rafTemporizador = null;
+    let timeoutPaso = null;
+    let esperaRestanteMs = 0;
+    let esperaTotalMs = 0;
+    let ultimoTickEspera = 0;
+
+    // Referencias DOM
+    const presetSelect = document.getElementById("preset-select");
+    const btnLoadPreset = document.getElementById("btn-load-preset");
+    const btnLaunchShow = document.getElementById("btn-launch-show");
+    const btnPauseShow = document.getElementById("btn-pause-show");
+    const btnBlackout = document.getElementById("btn-blackout");
+    const masterDimmerInput = document.getElementById("master-dimmer");
+    const masterDimmerVal = document.getElementById("master-dimmer-val");
+    const scriptEditor = document.getElementById("script-editor");
+    const lineNumbers = document.getElementById("line-numbers");
+    const editorCoords = document.getElementById("editor-coords");
+    const cueLogList = document.getElementById("cue-log-list");
+
+    // ==================== CONSTRUCCIÓN DEL ESCENARIO Y BANCO DE 8 FADERS ====================
+    function inicializarMesaDMX() {
+      const fixturesRow = document.getElementById("fixtures-row");
+      const faderWing = document.getElementById("fader-wing");
+
+      let htmlFixtures = "";
+      let htmlFaders = "";
+
+      for (let ch = 1; ch <= 8; ch++) {
+        const colorInicial = estadoCanales[ch].colorKey;
+        const opcionesColor = Object.entries(PALETA_COLORES)
+          .map(([key, cfg]) => `<option value="${key}" ${key === colorInicial ? "selected" : ""}>${cfg.nombre}</option>`)
+          .join("");
+
+        htmlFixtures += `
+          <div class="fixture-unit">
+            <div id="spot-head-${ch}" class="spotlight-head">
+              <div id="spot-core-${ch}" class="spotlight-core"></div>
+            </div>
+            <div id="light-beam-${ch}" class="light-beam"></div>
+            <div id="fixture-tag-${ch}" class="fixture-tag">CH${ch} · 0%</div>
+          </div>
+        `;
+
+        htmlFaders += `
+          <div id="ch-strip-${ch}" class="channel-strip">
+            <div class="ch-header">CH 0${ch}</div>
+            <select id="color-picker-${ch}" class="ch-color-picker" data-ch="${ch}">
+              ${opcionesColor}
+            </select>
+            <div class="fader-slot">
+              <div id="fader-meter-${ch}" class="fader-meter"></div>
+              <input
+                id="fader-input-${ch}"
+                class="vertical-fader"
+                type="range"
+                min="0"
+                max="100"
+                value="0"
+                data-ch="${ch}"
+              />
+            </div>
+            <div class="readout-box">
+              <span id="readout-pct-${ch}" class="readout-pct">0%</span>
+              <span id="readout-dmx-${ch}" class="readout-dmx">000 DMX</span>
+            </div>
+            <button id="btn-flash-${ch}" class="btn-flash" type="button" data-ch="${ch}">
+              FLASH
+            </button>
+          </div>
+        `;
+      }
+
+      fixturesRow.innerHTML = htmlFixtures;
+      faderWing.innerHTML = htmlFaders;
+
+      // Eventos interactivos de faders, selectores de color y botones FLASH / SOLO
+      for (let ch = 1; ch <= 8; ch++) {
+        const fader = document.getElementById(`fader-input-${ch}`);
+        const picker = document.getElementById(`color-picker-${ch}`);
+        const flashBtn = document.getElementById(`btn-flash-${ch}`);
+
+        fader.addEventListener("input", (e) => {
+          fijarIntensidadCanal(ch, parseInt(e.target.value, 10), false);
+        });
+
+        picker.addEventListener("change", (e) => {
+          estadoCanales[ch].colorKey = e.target.value;
+          renderizarLuzCanal(ch);
+        });
+
+        const iniciarFlash = () => {
+          if (estadoCanales[ch].previoFlash === null) {
+            estadoCanales[ch].previoFlash = estadoCanales[ch].intensidad;
+          }
+          flashBtn.classList.add("flashing");
+          fijarIntensidadCanal(ch, 100, true);
+        };
+
+        const terminarFlash = () => {
+          if (estadoCanales[ch].previoFlash !== null) {
+            const prev = estadoCanales[ch].previoFlash;
+            estadoCanales[ch].previoFlash = null;
+            flashBtn.classList.remove("flashing");
+            fijarIntensidadCanal(ch, prev, false);
+          }
+        };
+
+        flashBtn.addEventListener("mousedown", iniciarFlash);
+        flashBtn.addEventListener("mouseup", terminarFlash);
+        flashBtn.addEventListener("mouseleave", terminarFlash);
+        flashBtn.addEventListener("touchstart", (e) => { e.preventDefault(); iniciarFlash(); });
+        flashBtn.addEventListener("touchend", terminarFlash);
+      }
+    }
+
+    // ==================== RENDERIZADO DE LUMINARIAS Y FADERS ====================
+    function fijarIntensidadCanal(ch, porcentaje, resaltarCue = false) {
+      const pct = Math.max(0, Math.min(100, Math.round(porcentaje)));
+      estadoCanales[ch].intensidad = pct;
+
+      const fader = document.getElementById(`fader-input-${ch}`);
+      const meter = document.getElementById(`fader-meter-${ch}`);
+      const txtPct = document.getElementById(`readout-pct-${ch}`);
+      const txtDmx = document.getElementById(`readout-dmx-${ch}`);
+      const strip = document.getElementById(`ch-strip-${ch}`);
+
+      if (fader) fader.value = pct;
+      if (meter) meter.style.height = `${pct}%`;
+      if (txtPct) txtPct.textContent = `${pct}%`;
+      if (txtDmx) {
+        const dmx = Math.round((pct / 100) * 255);
+        txtDmx.textContent = `${String(dmx).padStart(3, "0")} DMX`;
+      }
+      if (strip) {
+        strip.classList.toggle("cue-active", resaltarCue);
+      }
+
+      renderizarLuzCanal(ch);
+    }
+
+    function renderizarLuzCanal(ch) {
+      const estado = estadoCanales[ch];
+      const colorCfg = PALETA_COLORES[estado.colorKey] || PALETA_COLORES.amber;
+      // Escalamos la luminosidad real por el Master Dimmer (0..100%)
+      const pctEfectivo = Math.round((estado.intensidad * masterDimmerPct) / 100);
+      const factor = pctEfectivo / 100;
+
+      const head = document.getElementById(`spot-head-${ch}`);
+      const core = document.getElementById(`spot-core-${ch}`);
+      const beam = document.getElementById(`light-beam-${ch}`);
+      const tag = document.getElementById(`fixture-tag-${ch}`);
+
+      if (!head) return;
+      tag.textContent = `CH${ch} · ${pctEfectivo}%`;
+
+      if (pctEfectivo <= 1) {
+        head.style.background = "radial-gradient(circle at 35% 35%, #263147, #090d14 75%)";
+        head.style.borderColor = "#2b3852";
+        head.style.boxShadow = "none";
+        core.style.background = "rgba(255, 255, 255, 0.08)";
+        core.style.boxShadow = "none";
+        beam.style.opacity = "0";
+      } else {
+        const glowRadius = Math.round(12 + factor * 34);
+        const alphaGlow = (0.3 + factor * 0.7).toFixed(2);
+        head.style.background = `radial-gradient(circle at 50% 50%, #ffffff 0%, ${colorCfg.hex} 58%, #090d14 100%)`;
+        head.style.borderColor = colorCfg.hex;
+        head.style.boxShadow = `0 0 ${glowRadius}px rgba(${colorCfg.rgb}, ${alphaGlow})`;
+        core.style.background = "#ffffff";
+        core.style.boxShadow = `0 0 14px #ffffff`;
+
+        beam.style.background = `linear-gradient(180deg, rgba(${colorCfg.rgb}, ${(factor * 0.78).toFixed(2)}) 0%, rgba(${colorCfg.rgb}, ${(factor * 0.22).toFixed(2)}) 65%, transparent 100%)`;
+        beam.style.opacity = String(Math.min(1, 0.18 + factor * 0.82));
+      }
+    }
+
+    function refrescarTodasLasLuces() {
+      for (let ch = 1; ch <= 8; ch++) {
+        renderizarLuzCanal(ch);
+      }
+    }
+
+    // Master Dimmer en tiempo real
+    masterDimmerInput.addEventListener("input", (e) => {
+      masterDimmerPct = parseInt(e.target.value, 10);
+      masterDimmerVal.textContent = `${masterDimmerPct}%`;
+      document.getElementById("floor-master-info").textContent = `MASTER DIMMER: ${masterDimmerPct}%`;
+      refrescarTodasLasLuces();
+    });
+
+    // ==================== BITÁCORA DEL SHOW (CUE LOG) ====================
+    function formatearMarcaTiempo(segundos) {
+      const mins = Math.floor(segundos / 60);
+      const secs = (segundos % 60).toFixed(1).padStart(4, "0");
+      return `[${String(mins).padStart(2, "0")}:${secs}]`;
+    }
+
+    function agregarEntradaCueLog(mensaje, clase = "") {
+      const li = document.createElement("li");
+      if (clase) li.className = clase;
+      const marca = formatearMarcaTiempo(acumuladoRelojSeg);
+      li.innerHTML = `<span class="cue-time">${marca}</span><span>${mensaje}</span>`;
+      cueLogList.appendChild(li);
+      cueLogList.scrollTop = cueLogList.scrollHeight;
+    }
+
+    function limpiarCueLog() {
+      cueLogList.innerHTML = "";
+    }
+
+    // ==================== MOTOR DE TEMPORIZACIÓN Y TRANSPORTE DEL SHOW ====================
+    function cancelarTimersActivos() {
+      if (timeoutPaso) {
+        clearTimeout(timeoutPaso);
+        timeoutPaso = null;
+      }
+      if (rafTemporizador) {
+        cancelAnimationFrame(rafTemporizador);
+        rafTemporizador = null;
+      }
+    }
+
+    function actualizarEtiquetaTransporte(texto, colorHex) {
+      const lbl = document.getElementById("transport-state-label");
+      lbl.textContent = texto;
+      lbl.style.color = colorHex;
+    }
+
+    function ejecutarBlackout() {
+      cancelarTimersActivos();
+      showEnEjecucion = false;
+      showPausado = false;
+      esperaRestanteMs = 0;
+      esperaTotalMs = 0;
+      btnPauseShow.textContent = "⏸ PAUSAR";
+
+      for (let ch = 1; ch <= 8; ch++) {
+        fijarIntensidadCanal(ch, 0, false);
+      }
+
+      document.getElementById("active-scene-name").textContent = "ESCENA: BLACKOUT (0%)";
+      document.getElementById("active-mix-status").textContent = "Mezclador: Todos los canales a 0 DMX";
+      document.getElementById("wait-countdown").textContent = "0.00 s";
+      document.getElementById("wait-progress-fill").style.width = "0%";
+      actualizarEtiquetaTransporte("BLACKOUT", "var(--crimson)");
+      agregarEntradaCueLog("BLACKOUT manual activado — Todos los canales DMX apagados (0%).", "cue-fault");
+    }
+
+    function alternarPausaShow() {
+      if (!showEnEjecucion) return;
+
+      if (!showPausado) {
+        showPausado = true;
+        cancelarTimersActivos();
+        btnPauseShow.textContent = "▶ REANUDAR";
+        actualizarEtiquetaTransporte("EN PAUSA", "var(--amber)");
+        agregarEntradaCueLog("Show en pausa por el operador.", "cue-scene");
+      } else {
+        showPausado = false;
+        btnPauseShow.textContent = "⏸ PAUSAR";
+        actualizarEtiquetaTransporte("EJECUTANDO SHOW", "var(--emerald)");
+        agregarEntradaCueLog("Show reanudado.", "cue-scene");
+        if (esperaRestanteMs > 0) {
+          iniciarCuentaRegresivaEspera(esperaRestanteMs, esperaTotalMs);
+        } else {
+          procesarSiguienteEventoShow();
+        }
+      }
+    }
+
+    function iniciarCuentaRegresivaEspera(restanteMs, totalMs) {
+      esperaRestanteMs = restanteMs;
+      esperaTotalMs = totalMs;
+      ultimoTickEspera = performance.now();
+
+      const lblCountdown = document.getElementById("wait-countdown");
+      const barFill = document.getElementById("wait-progress-fill");
+      const lblClock = document.getElementById("show-clock");
+
+      function tick(now) {
+        if (!showEnEjecucion || showPausado) return;
+        const delta = now - ultimoTickEspera;
+        ultimoTickEspera = now;
+
+        esperaRestanteMs = Math.max(0, esperaRestanteMs - delta);
+        acumuladoRelojSeg += delta / 1000;
+
+        const segRestantes = (esperaRestanteMs / 1000).toFixed(2);
+        const progreso = totalMs > 0 ? Math.min(100, ((totalMs - esperaRestanteMs) / totalMs) * 100) : 100;
+
+        lblCountdown.textContent = `${segRestantes} s`;
+        barFill.style.width = `${progreso}%`;
+        lblClock.textContent = `Reloj: ${formatearMarcaTiempo(acumuladoRelojSeg).slice(1, -1)}`;
+
+        if (esperaRestanteMs <= 0) {
+          agregarEntradaCueLog(`Espera ${(totalMs / 1000).toFixed(2)}s completada.`, "cue-wait");
+          procesarSiguienteEventoShow();
+        } else {
+          rafTemporizador = requestAnimationFrame(tick);
+        }
+      }
+
+      rafTemporizador = requestAnimationFrame(tick);
+    }
+
+    function procesarSiguienteEventoShow() {
+      if (!showEnEjecucion || showPausado) return;
+
+      // Limpiamos resaltado previo de canales
+      for (let ch = 1; ch <= 8; ch++) {
+        const s = document.getElementById(`ch-strip-${ch}`);
+        if (s) s.classList.remove("cue-active");
+      }
+
+      if (indiceEventoActual >= colaEventosShow.length) {
+        showEnEjecucion = false;
+        btnPauseShow.textContent = "⏸ PAUSAR";
+        document.getElementById("wait-countdown").textContent = "0.00 s";
+        document.getElementById("wait-progress-fill").style.width = "100%";
+        actualizarEtiquetaTransporte("SHOW FINALIZADO", "var(--cyan)");
+        agregarEntradaCueLog("Secuencia del show finalizada con éxito.", "cue-scene");
+        return;
+      }
+
+      const ev = colaEventosShow[indiceEventoActual];
+      indiceEventoActual++;
+      document.getElementById("cue-counter-badge").textContent = `${indiceEventoActual} / ${colaEventosShow.length} Cues`;
+
+      if (ev.accion === "ESCENA_INICIO") {
+        const nombreUpper = String(ev.escena).toUpperCase();
+        document.getElementById("active-scene-name").textContent = `ESCENA: ${nombreUpper}`;
+        agregarEntradaCueLog(`Escena '${ev.escena}' iniciada.`, "cue-scene");
+        timeoutPaso = setTimeout(procesarSiguienteEventoShow, 260);
+        return;
+      }
+
+      if (ev.accion === "ESCENA_FIN") {
+        agregarEntradaCueLog(`Escena '${ev.escena}' finalizada.`, "cue-scene");
+        timeoutPaso = setTimeout(procesarSiguienteEventoShow, 240);
+        return;
+      }
+
+      if (ev.accion === "CANAL") {
+        const ch = ev.canal;
+        const pct = ev.intensidad;
+        const dmx = Math.round((pct / 100) * 255);
+        fijarIntensidadCanal(ch, pct, true);
+        agregarEntradaCueLog(`Canal ${ch} ➔ ${pct}% (${dmx} DMX)`);
+        timeoutPaso = setTimeout(procesarSiguienteEventoShow, 300);
+        return;
+      }
+
+      if (ev.accion === "MEZCLA") {
+        const chA = ev.canal_a;
+        const chB = ev.canal_b;
+        const resPct = ev.resultado;
+        const dmx = Math.round((resPct / 100) * 255);
+
+        fijarIntensidadCanal(chA, resPct, true);
+        fijarIntensidadCanal(chB, resPct, true);
+
+        document.getElementById("active-mix-status").textContent =
+          `Mezcla Activa: CH${chA} + CH${chB} ➔ ${resPct}% (${dmx} DMX)`;
+        agregarEntradaCueLog(
+          `Mezcla Canal ${chA} + Canal ${chB} ➔ ${resPct}% (${dmx} DMX)`,
+          "cue-mix"
+        );
+        timeoutPaso = setTimeout(procesarSiguienteEventoShow, 340);
+        return;
+      }
+
+      if (ev.accion === "ESPERA") {
+        const segs = Number(ev.segundos) || 1.5;
+        const totalMs = Math.max(250, Math.round(segs * 1000));
+        agregarEntradaCueLog(`Iniciando espera temporizada de ${segs.toFixed(2)}s...`, "cue-wait");
+        iniciarCuentaRegresivaEspera(totalMs, totalMs);
+        return;
+      }
+
+      timeoutPaso = setTimeout(procesarSiguienteEventoShow, 200);
+    }
+
+    function lanzarReproduccionEventos(eventos) {
+      cancelarTimersActivos();
+      limpiarCueLog();
+
+      colaEventosShow = eventos || [];
+      indiceEventoActual = 0;
+      acumuladoRelojSeg = 0;
+      esperaRestanteMs = 0;
+      esperaTotalMs = 0;
+      showEnEjecucion = true;
+      showPausado = false;
+      btnPauseShow.textContent = "⏸ PAUSAR";
+
+      document.getElementById("show-clock").textContent = "Reloj: 00:00.0";
+      document.getElementById("cue-counter-badge").textContent = `0 / ${colaEventosShow.length} Cues`;
+      actualizarEtiquetaTransporte("EJECUTANDO SHOW", "var(--emerald)");
+
+      procesarSiguienteEventoShow();
+    }
+
+    // ==================== EDITOR DE CÓDIGO Y PANTALLA LCD DE ESTADO ====================
+    function actualizarNumeracionEditor() {
+      const lineas = scriptEditor.value.split("\n").length;
+      let html = "";
+      for (let i = 1; i <= lineas; i++) {
+        const cls = (lineaErrorActual === i) ? "ln-item ln-error" : "ln-item";
+        html += `<div class="${cls}">${i}</div>`;
+      }
+      lineNumbers.innerHTML = html;
+    }
+
+    function actualizarCoordenadasEditor() {
+      const pos = scriptEditor.selectionStart || 0;
+      const partes = scriptEditor.value.slice(0, pos).split("\n");
+      editorCoords.textContent = `L:${partes.length}, C:${partes[partes.length - 1].length + 1}`;
+    }
+
+    scriptEditor.addEventListener("input", () => {
+      lineaErrorActual = null;
+      actualizarNumeracionEditor();
+      actualizarCoordenadasEditor();
+    });
+    scriptEditor.addEventListener("click", actualizarCoordenadasEditor);
+    scriptEditor.addEventListener("keyup", actualizarCoordenadasEditor);
+    scriptEditor.addEventListener("scroll", () => {
+      lineNumbers.scrollTop = scriptEditor.scrollTop;
+    });
+
+    function mostrarEstadoLCD(ok, titular, badge, detalle, lineaFallo = null) {
+      const panel = document.getElementById("lcd-panel");
+      const head = document.getElementById("lcd-headline");
+      const bdg = document.getElementById("lcd-badge");
+      const msg = document.getElementById("lcd-message");
+
+      panel.className = ok ? "lcd-status-panel ready" : "lcd-status-panel fault";
+      head.textContent = titular;
+      bdg.textContent = badge;
+      msg.textContent = detalle;
+
+      lineaErrorActual = lineaFallo;
+      actualizarNumeracionEditor();
+    }
+
+    // ==================== COMUNICACIÓN CON EL BACKEND (/api/presets & /api/ejecutar-show) ====================
+    async function compilarYLanzarShow() {
+      btnLaunchShow.disabled = true;
+      btnLaunchShow.textContent = "⏳ VALIDANDO RUTINA...";
+
+      try {
+        const resp = await fetch("/api/ejecutar-show", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ codigo: scriptEditor.value })
+        });
+        const data = await resp.json();
+
+        if (!data.ok) {
+          cancelarTimersActivos();
+          showEnEjecucion = false;
+          for (let ch = 1; ch <= 8; ch++) {
+            fijarIntensidadCanal(ch, 0, false);
+          }
+          document.getElementById("active-scene-name").textContent = "ESCENA: BLOQUEO DE SEGURIDAD";
+          document.getElementById("active-mix-status").textContent = "Mezclador detenido por error en la rutina";
+          actualizarEtiquetaTransporte("ERROR EN RUTINA", "var(--crimson)");
+
+          mostrarEstadoLCD(
+            false,
+            "✖ BLOQUEO DE CONSOLA — ERROR EN RUTINA STAGELANG",
+            data.tipo_fallo || "ERROR",
+            data.alerta || "Se detectó un error en la rutina.",
+            data.linea || null
+          );
+
+          limpiarCueLog();
+          agregarEntradaCueLog(data.alerta || "Rutina bloqueada por el controlador.", "cue-fault");
+          return;
+        }
+
+        const totalCues = (data.eventos || []).length;
+        const durTotal = (data.estado_final && data.estado_final.duracion_total_segundos) || 0;
+        mostrarEstadoLCD(
+          true,
+          "● SHOW COMPILADO Y LISTO",
+          `${totalCues} CUES · ${durTotal}s`,
+          `Rutina validada sin errores. Disparando secuencia de ${totalCues} acciones escénicas sobre los 8 canales DMX.`
+        );
+
+        lanzarReproduccionEventos(data.eventos || []);
+      } catch (err) {
+        mostrarEstadoLCD(
+          false,
+          "✖ ERROR DE COMUNICACIÓN CON EL CONTROLADOR",
+          "OFFLINE",
+          String(err)
+        );
+      } finally {
+        btnLaunchShow.disabled = false;
+        btnLaunchShow.textContent = "▶ COMPILAR Y LANZAR SHOW";
+      }
+    }
+
+    async function cargarPresetsDesdeServidor() {
+      try {
+        const resp = await fetch("/api/presets");
+        const data = await resp.json();
+        catalogoPresets = data.presets || [];
+
+        presetSelect.innerHTML = catalogoPresets
+          .map((p, idx) => `<option value="${idx}">${p.titulo}</option>`)
+          .join("");
+
+        if (catalogoPresets.length > 0) {
+          cargarPresetEnEditor(0, true);
+        }
+      } catch (err) {
+        mostrarEstadoLCD(false, "✖ ERROR AL CARGAR PRESETS", "HTTP", String(err));
+      }
+    }
+
+    function cargarPresetEnEditor(indice, autoLanzar = false) {
+      const preset = catalogoPresets[indice];
+      if (!preset) return;
+      scriptEditor.value = preset.codigo;
+      lineaErrorActual = null;
+      actualizarNumeracionEditor();
+      actualizarCoordenadasEditor();
+
+      mostrarEstadoLCD(
+        true,
+        "● RUTINA CARGADA EN EL PROGRAMADOR",
+        preset.id.toUpperCase(),
+        preset.descripcion
+      );
+
+      if (autoLanzar) {
+        compilarYLanzarShow();
+      }
+    }
+
+    btnLoadPreset.addEventListener("click", () => {
+      cargarPresetEnEditor(parseInt(presetSelect.value, 10), false);
+    });
+
+    presetSelect.addEventListener("change", () => {
+      cargarPresetEnEditor(parseInt(presetSelect.value, 10), true);
+    });
+
+    btnLaunchShow.addEventListener("click", compilarYLanzarShow);
+    btnPauseShow.addEventListener("click", alternarPausaShow);
+    btnBlackout.addEventListener("click", ejecutarBlackout);
+
+    // Inicialización al arrancar la consola
+    inicializarMesaDMX();
+    cargarPresetsDesdeServidor();
+  </script>
+</body>
+</html>
